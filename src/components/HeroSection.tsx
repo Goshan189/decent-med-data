@@ -50,7 +50,7 @@ const HeroSection = () => {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-foreground/90 max-w-4xl mx-auto leading-relaxed">
             Empowering patients to own their medical data while enabling researchers to access 
             verified, AI-validated datasets through secure smart contracts and P2P blockchain technology.
           </p>

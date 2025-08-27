@@ -1,21 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Shield, Users, Zap, Lock } from "lucide-react";
-import heroImage from "@/assets/hero-background-clean.jpg";
+import heroImage from "@/assets/hero-medical-network.jpg";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero overflow-hidden">
       {/* Background Image */}
-      <div className="absolute inset-0 opacity-60">
+      <div className="absolute inset-0 opacity-20">
         <img 
           src={heroImage} 
           alt="Medical data network" 
           className="w-full h-full object-cover"
         />
       </div>
-      
-      {/* Overlay for better text visibility */}
-      <div className="absolute inset-0 bg-background/20"></div>
       
       {/* Floating Elements */}
       <div className="absolute top-20 left-10 animate-float">
@@ -44,21 +41,19 @@ const HeroSection = () => {
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl font-bold text-black dark:text-white leading-tight">
+          <h1 className="text-5xl md:text-7xl font-bold text-foreground leading-tight">
             Decentralized AI-Powered
             <br />
-            <span className="text-black dark:text-white">
+            <span className="bg-gradient-primary bg-clip-text text-transparent">
               Medical Data Marketplace
             </span>
           </h1>
 
           {/* Subtitle */}
-          <div className="bg-background/80 backdrop-blur-sm rounded-2xl p-6 max-w-4xl mx-auto">
-            <p className="text-xl md:text-2xl text-foreground leading-relaxed font-medium">
-              Empowering patients to own their medical data while enabling researchers to access 
-              verified, AI-validated datasets through secure smart contracts and P2P blockchain technology.
-            </p>
-          </div>
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+            Empowering patients to own their medical data while enabling researchers to access 
+            verified, AI-validated datasets through secure smart contracts and P2P blockchain technology.
+          </p>
 
           {/* Key Features */}
           <div className="flex flex-wrap justify-center gap-6 text-sm font-medium">

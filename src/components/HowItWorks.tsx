@@ -67,24 +67,24 @@ const HowItWorks = () => {
         </div>
 
         {/* Process Steps */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
               <Card key={index} className="relative overflow-hidden group hover:shadow-glow transition-all duration-300">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-primary opacity-10 rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500" />
-                <CardHeader className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-gradient-primary rounded-full">
-                      <Icon className="w-6 h-6 text-primary-foreground" />
+                <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-primary opacity-10 rounded-full -translate-y-8 translate-x-8 sm:-translate-y-10 sm:translate-x-10 group-hover:scale-150 transition-transform duration-500" />
+                <CardHeader className="relative p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className="p-2 sm:p-3 bg-gradient-primary rounded-full">
+                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {step.badge}
                     </Badge>
                   </div>
-                  <CardTitle className="text-lg font-semibold">{step.title}</CardTitle>
+                  <CardTitle className="text-base sm:text-lg font-semibold">{step.title}</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {step.description}
                   </p>
@@ -95,17 +95,17 @@ const HowItWorks = () => {
         </div>
 
         {/* Key Features */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <div key={index} className="flex items-start gap-4 p-6 bg-card rounded-lg shadow-medical">
-                <div className="p-3 bg-secondary rounded-full flex-shrink-0">
-                  <Icon className="w-6 h-6 text-secondary-foreground" />
+              <div key={index} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-6 bg-card rounded-lg shadow-medical">
+                <div className="p-2 sm:p-3 bg-secondary rounded-full flex-shrink-0">
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-secondary-foreground" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-2 text-foreground">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2 text-foreground">{feature.title}</h3>
+                  <p className="text-muted-foreground text-sm sm:text-base">{feature.description}</p>
                 </div>
               </div>
             );

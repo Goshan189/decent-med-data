@@ -84,7 +84,7 @@ const HeroSection = () => {
           </div>
 
           {/* Trust Indicators */}
-          <div className="pt-6 sm:pt-8 text-xs sm:text-sm text-muted-foreground px-2">
+          <div className="pt-6 sm:pt-8 text-xs sm:text-sm text-foreground/80 px-2">
             <p className="flex flex-wrap justify-center gap-1 sm:gap-2">
               <span>Powered by</span>
               <span>•</span>

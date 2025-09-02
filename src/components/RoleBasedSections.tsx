@@ -124,23 +124,13 @@ const RoleBasedSections = () => {
           <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-6 sm:mb-8">
             Built on Cutting-Edge Technology
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
             {[
               { name: "Solidity", desc: "Smart Contracts" },
               { name: "IPFS", desc: "Data Storage" },
               { name: "Ganache", desc: "Blockchain" },
               { name: "MetaMask", desc: "Wallet Integration" },
-              { name: "React", desc: "Frontend" },
-              { name: "Web3.js", desc: "Blockchain API" },
-              { name: "Node.js", desc: "Backend Runtime" },
-              { name: "MongoDB", desc: "Database" },
-              { name: "Express", desc: "API Server" },
-              { name: "TypeScript", desc: "Type Safety" },
-              { name: "Tailwind", desc: "Styling" },
-              { name: "Docker", desc: "Containerization" },
-              { name: "AWS", desc: "Cloud Infrastructure" },
-              { name: "Redis", desc: "Caching" },
-              { name: "GraphQL", desc: "Query Language" }
+              { name: "React", desc: "Frontend" }
             ].map((tech, index) => (
               <Card key={index} className="p-3 sm:p-4 hover:shadow-glow transition-all duration-300">
                 <CardContent className="text-center p-0">

@@ -28,7 +28,7 @@ const RoleBasedSections = () => {
     <section className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-6">
         {/* Patients Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center mb-16 sm:mb-20 lg:mb-24">
+        <div id="for-patients" className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center mb-16 sm:mb-20 lg:mb-24">
           <div className="order-2 lg:order-1">
             <img 
               src={securityImage} 
@@ -74,7 +74,7 @@ const RoleBasedSections = () => {
         </div>
 
         {/* Researchers Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
+        <div id="for-researchers" className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
           <div>
             <Badge variant="outline" className="mb-3 sm:mb-4 text-accent-foreground border-accent">
               <UserCheck className="w-4 h-4 mr-2" />
@@ -120,7 +120,7 @@ const RoleBasedSections = () => {
         </div>
 
         {/* Technology Stack */}
-        <div className="mt-16 sm:mt-20 lg:mt-24 text-center">
+        <div id="technology" className="mt-16 sm:mt-20 lg:mt-24 text-center">
           <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-6 sm:mb-8">
             Built on Cutting-Edge Technology
           </h3>

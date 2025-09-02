@@ -1,4 +1,9 @@
 @tailwind base;
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
 @tailwind components;
 @tailwind utilities;
 

@@ -44,7 +44,7 @@ const HeroSection = () => {
           <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold text-foreground leading-tight">
             Decentralized AI-Powered
             <br />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">
+            <span className="text-black">
               Medical Data Marketplace
             </span>
           </h1>

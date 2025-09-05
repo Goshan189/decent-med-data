@@ -5,6 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import ProductRegistration from "./pages/ProductRegistration";
+import DataStorage from "./pages/DataStorage";
+import Verification from "./pages/Verification";
+import TransactionHistory from "./pages/TransactionHistory";
+import WalletIntegration from "./pages/WalletIntegration";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +21,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/register" element={<ProductRegistration />} />
+          <Route path="/storage" element={<DataStorage />} />
+          <Route path="/verify" element={<Verification />} />
+          <Route path="/transactions" element={<TransactionHistory />} />
+          <Route path="/wallet" element={<WalletIntegration />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

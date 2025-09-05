@@ -124,18 +124,19 @@ const RoleBasedSections = () => {
           <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-6 sm:mb-8">
             Built on Cutting-Edge Technology
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
             {[
-              { name: "Solidity", desc: "Smart Contracts" },
-              { name: "IPFS", desc: "Data Storage" },
-              { name: "Ganache", desc: "Blockchain" },
-              { name: "MetaMask", desc: "Wallet Integration" },
-              { name: "React", desc: "Frontend" }
+              { name: "Product Registration", desc: "Solidity + Ganache + Truffle", tech: "On-chain" },
+              { name: "Data Storage", desc: "IPFS + Express Backend", tech: "Decentralized" },
+              { name: "Verification", desc: "React + Web3.js + Smart Contracts", tech: "Authenticity Check" },
+              { name: "Transaction Logging", desc: "Smart Contract + React Frontend", tech: "Immutable Records" },
+              { name: "Wallet Integration", desc: "MetaMask", tech: "User Interaction" }
             ].map((tech, index) => (
               <Card key={index} className="p-3 sm:p-4 hover:shadow-glow transition-all duration-300">
                 <CardContent className="text-center p-0">
                   <h4 className="font-semibold text-sm sm:text-base text-primary mb-1">{tech.name}</h4>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{tech.desc}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{tech.tech}</p>
+                  <p className="text-xs text-muted-foreground/80">{tech.desc}</p>
                 </CardContent>
               </Card>
             ))}

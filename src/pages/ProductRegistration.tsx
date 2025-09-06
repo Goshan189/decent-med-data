@@ -15,6 +15,7 @@ const ProductRegistration = () => {
   const { account, provider, connectWallet, isConnected } = useWallet();
   const { toast } = useToast();
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registeredHash, setRegisteredHash] = useState<string>('');
   const [formData, setFormData] = useState({
     productName: '',
     description: '',
@@ -39,15 +40,23 @@ const ProductRegistration = () => {
 
     setIsRegistering(true);
     try {
+      // Generate hash from form data
+      const dataString = `${formData.productName}${formData.description}${formData.category}${Date.now()}`;
+      const hash = `0x${Array.from(dataString).map((char, i) => 
+        (char.charCodeAt(0) + i).toString(16).padStart(2, '0')
+      ).join('').slice(0, 64)}`;
+      
       // Simulate blockchain registration
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      setRegisteredHash(hash);
+      
       toast({
         title: "Success!",
-        description: "Medical data registered on blockchain",
+        description: `Data registered! Hash: ${hash.slice(0, 10)}...`,
       });
       
-      // Reset form
+      // Reset form but keep hash for display
       setFormData({
         productName: '',
         description: '',
@@ -161,6 +170,49 @@ const ProductRegistration = () => {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Registration Result */}
+              {registeredHash && (
+                <Card className="border-green-200 bg-green-50/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-green-700">
+                      <CheckCircle className="w-5 h-5" />
+                      Registration Successful
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-green-700">Generated Hash:</Label>
+                      <div className="mt-2 p-3 bg-green-100 rounded-md border">
+                        <code className="text-sm font-mono break-all text-green-800">
+                          {registeredHash}
+                        </code>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigator.clipboard.writeText(registeredHash)}
+                        className="flex-1"
+                      >
+                        Copy Hash
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.open('/verification', '_blank')}
+                        className="flex-1"
+                      >
+                        Verify Now
+                      </Button>
+                    </div>
+                    <p className="text-xs text-green-600">
+                      Use this hash in the Verification page to check authenticity
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Status Panel */}

@@ -16,12 +16,13 @@ const ProductRegistration = () => {
   const { account, provider, connectWallet, isConnected } = useWallet();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentStep, setCurrentStep] = useState<'register' | 'upload' | 'verify' | 'marketplace'>('register');
+  const [currentStep, setCurrentStep] = useState<'register' | 'hash' | 'upload' | 'verify'>('register');
   const [isRegistering, setIsRegistering] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [registeredHash, setRegisteredHash] = useState<string>('');
+  const [userType, setUserType] = useState<'researcher' | 'patient' | null>(null);
   const [formData, setFormData] = useState({
     productName: '',
     description: '',
@@ -70,8 +71,8 @@ const ProductRegistration = () => {
         description: `Data registered! Hash: ${hash.slice(0, 10)}...`,
       });
       
-      // Move to upload step
-      setCurrentStep('upload');
+      // Move to hash verification step
+      setCurrentStep('hash');
     } catch (error) {
       toast({
         title: "Error",
@@ -143,11 +144,8 @@ const ProductRegistration = () => {
       setVerificationStatus('verified');
       toast({
         title: "Verification Complete!",
-        description: "Documents have been verified and are now available for purchase",
+        description: "Documents have been verified successfully",
       });
-
-      // Move to marketplace
-      setCurrentStep('marketplace');
     } catch (error) {
       setVerificationStatus('failed');
       toast({
@@ -225,23 +223,82 @@ const ProductRegistration = () => {
                 )}
               </Button>
 
-              {registeredHash && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-sm text-green-700 font-medium">✓ Data registered successfully!</p>
-                  <p className="text-xs text-green-600 mt-1">Hash: {registeredHash.slice(0, 20)}...</p>
+            </CardContent>
+          </Card>
+        );
+
+      case 'hash':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Step 2: Hash Generated for Verification
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center p-8">
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
-              )}
+                <h3 className="font-medium text-green-700 mb-2">Data Registered Successfully!</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your data has been registered on the blockchain for verification
+                </p>
+                
+                <div className="bg-muted p-4 rounded-lg mb-6">
+                  <p className="text-xs text-muted-foreground mb-2">Generated Hash:</p>
+                  <p className="font-mono text-sm break-all">{registeredHash}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(registeredHash);
+                      toast({ title: "Hash copied to clipboard!" });
+                    }}
+                  >
+                    Copy Hash
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Choose your role to continue:</p>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={() => {
+                        setUserType('researcher');
+                        setCurrentStep('upload');
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Join as Researcher
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setUserType('patient');
+                        setCurrentStep('verify');
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Continue as Patient
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         );
 
       case 'upload':
-        return (
+        return userType === 'researcher' ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="w-5 h-5" />
-                Step 2: Upload Documents
+                Step 3: Upload Documents (Researcher)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -308,7 +365,7 @@ const ProductRegistration = () => {
               )}
             </CardContent>
           </Card>
-        );
+        ) : null;
 
       case 'verify':
         return (
@@ -316,7 +373,7 @@ const ProductRegistration = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                Step 3: Document Verification
+                {userType === 'researcher' ? 'Step 4: Document Verification' : 'Step 3: Data Verification'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -329,7 +386,10 @@ const ProductRegistration = () => {
                     <div>
                       <h3 className="font-medium mb-2">Ready for Verification</h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Your documents will be verified for authenticity and compliance
+                        {userType === 'researcher' 
+                          ? 'Your documents will be verified for authenticity and compliance'
+                          : 'Your data will be verified for authenticity'
+                        }
                       </p>
                       <Button 
                         onClick={handleVerification}
@@ -360,7 +420,10 @@ const ProductRegistration = () => {
                     <div>
                       <h3 className="font-medium text-green-700 mb-2">Verification Complete</h3>
                       <p className="text-sm text-green-600">
-                        Documents have been verified and are now available for purchase
+                        {userType === 'researcher' 
+                          ? 'Documents have been verified successfully'
+                          : 'Data has been verified successfully'
+                        }
                       </p>
                     </div>
                   </div>
@@ -390,97 +453,6 @@ const ProductRegistration = () => {
           </Card>
         );
 
-      case 'marketplace':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5" />
-                Step 4: Document Marketplace
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center mb-6">
-                <h3 className="font-medium text-green-700 mb-2">🎉 Your documents are now live!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Users can now view and purchase your verified medical documents
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {uploadedFiles.map((file, index) => (
-                  <div key={index} className="p-4 border border-border rounded-lg bg-card">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h5 className="font-medium text-sm">{file.name}</h5>
-                        <p className="text-xs text-muted-foreground">{file.size} • Verified ✓</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-primary">${file.price}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          Available
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={() => window.open(file.gateway, '_blank')}
-                      >
-                        <Eye className="w-3 h-3 mr-1" />
-                        Preview
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => {
-                          toast({
-                            title: "Purchase Initiated",
-                            description: `Initiating purchase of ${file.name} for $${file.price}`,
-                          });
-                        }}
-                      >
-                        <ShoppingCart className="w-3 h-3 mr-1" />
-                        Purchase
-                      </Button>
-                    </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs text-muted-foreground">IPFS Hash:</p>
-                      <p className="text-xs font-mono bg-muted p-2 rounded mt-1 break-all">
-                        {file.hash}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-border">
-                <Button 
-                  onClick={() => {
-                    setCurrentStep('register');
-                    setFormData({
-                      productName: '',
-                      description: '',
-                      category: '',
-                      dataHash: ''
-                    });
-                    setRegisteredHash('');
-                    setUploadedFiles([]);
-                    setVerificationStatus('pending');
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Register New Product
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
 
       default:
         return null;
@@ -512,18 +484,18 @@ const ProductRegistration = () => {
             <div className="lg:col-span-2">
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  {['register', 'upload', 'verify', 'marketplace'].map((step, index) => (
+                  {['register', 'hash', 'upload', 'verify'].map((step, index) => (
                     <div key={step} className="flex items-center">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                         currentStep === step ? 'bg-primary text-primary-foreground' :
-                        ['register', 'upload', 'verify', 'marketplace'].indexOf(currentStep) > index ? 'bg-green-500 text-white' :
+                        ['register', 'hash', 'upload', 'verify'].indexOf(currentStep) > index ? 'bg-green-500 text-white' :
                         'bg-muted text-muted-foreground'
                       }`}>
-                        {['register', 'upload', 'verify', 'marketplace'].indexOf(currentStep) > index ? '✓' : index + 1}
+                        {['register', 'hash', 'upload', 'verify'].indexOf(currentStep) > index ? '✓' : index + 1}
                       </div>
                       {index < 3 && (
                         <div className={`h-1 w-16 ml-2 ${
-                          ['register', 'upload', 'verify', 'marketplace'].indexOf(currentStep) > index ? 'bg-green-500' : 'bg-muted'
+                          ['register', 'hash', 'upload', 'verify'].indexOf(currentStep) > index ? 'bg-green-500' : 'bg-muted'
                         }`} />
                       )}
                     </div>
@@ -531,9 +503,9 @@ const ProductRegistration = () => {
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Register</span>
+                  <span>Hash</span>
                   <span>Upload</span>
                   <span>Verify</span>
-                  <span>Marketplace</span>
                 </div>
               </div>
 

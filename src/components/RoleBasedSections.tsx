@@ -62,7 +62,12 @@ const RoleBasedSections = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Button variant="medical" size="lg" className="w-full sm:w-auto">
+              <Button 
+                variant="medical" 
+                size="lg" 
+                className="w-full sm:w-auto"
+                onClick={() => window.location.href = '/product-registration?role=patient'}
+              >
                 <User className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Start Publishing Data
               </Button>
@@ -101,7 +106,12 @@ const RoleBasedSections = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Button variant="blockchain" size="lg" className="w-full sm:w-auto">
+              <Button 
+                variant="blockchain" 
+                size="lg" 
+                className="w-full sm:w-auto"
+                onClick={() => window.location.href = '/product-registration?role=researcher'}
+              >
                 <Database className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Browse Datasets
               </Button>

@@ -75,10 +75,20 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
-            <Button variant="hero" size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4">
+            <Button 
+              variant="hero" 
+              size="lg" 
+              className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4"
+              onClick={() => window.location.href = '/product-registration?role=patient'}
+            >
               Start as Patient Publisher
             </Button>
-            <Button variant="medical" size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4">
+            <Button 
+              variant="medical" 
+              size="lg" 
+              className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4"
+              onClick={() => window.location.href = '/product-registration?role=researcher'}
+            >
               Join as Researcher
             </Button>
           </div>

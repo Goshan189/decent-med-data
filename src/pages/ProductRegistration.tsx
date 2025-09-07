@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,21 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useWallet } from "@/hooks/useWallet";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Shield, Clock, CheckCircle, Upload, File, Globe, Eye, ShoppingCart } from "lucide-react";
+import { Database, Shield, Clock, CheckCircle, Upload, ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ResearcherMarketplace from "./ResearcherMarketplace";
 
 const ProductRegistration = () => {
   const { account, provider, connectWallet, isConnected } = useWallet();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentStep, setCurrentStep] = useState<'register' | 'hash' | 'upload' | 'verify'>('register');
+  const [currentStep, setCurrentStep] = useState<'register' | 'hash' | 'upload' | 'verify' | 'success'>('register');
   const [isRegistering, setIsRegistering] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [registeredHash, setRegisteredHash] = useState<string>('');
   const [userType, setUserType] = useState<'researcher' | 'patient' | null>(null);
+  const [enteredHash, setEnteredHash] = useState<string>('');
   const [formData, setFormData] = useState({
     productName: '',
     description: '',
@@ -37,6 +39,17 @@ const ProductRegistration = () => {
     price?: string;
   }>>([]);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'failed'>('pending');
+
+  // Check URL parameters for role
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const role = urlParams.get('role');
+    if (role === 'researcher') {
+      return; // Show researcher marketplace
+    } else if (role === 'patient') {
+      setUserType('patient');
+    }
+  }, []);
 
   const handleRegister = async () => {
     if (!isConnected) {
@@ -136,15 +149,35 @@ const ProductRegistration = () => {
   };
 
   const handleVerification = async () => {
+    // Check if entered hash matches registered hash
+    if (!enteredHash) {
+      toast({
+        title: "Error",
+        description: "Please enter the hash value for verification",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (enteredHash !== registeredHash) {
+      toast({
+        title: "Verification Failed",
+        description: "Hash does not match. Please check and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsVerifying(true);
     try {
       // Simulate verification process
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       setVerificationStatus('verified');
+      setCurrentStep('success');
       toast({
         title: "Verification Complete!",
-        description: "Documents have been verified successfully",
+        description: "Hash verified successfully. Upload complete!",
       });
     } catch (error) {
       setVerificationStatus('failed');
@@ -262,43 +295,25 @@ const ProductRegistration = () => {
                   </Button>
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Choose your role to continue:</p>
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={() => {
-                        setUserType('researcher');
-                        setCurrentStep('upload');
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Join as Researcher
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        setUserType('patient');
-                        setCurrentStep('verify');
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Continue as Patient
-                    </Button>
-                  </div>
-                </div>
+                <Button 
+                  onClick={() => setCurrentStep('upload')}
+                  className="w-full"
+                  size="lg"
+                >
+                  Continue to Document Upload
+                </Button>
               </div>
             </CardContent>
           </Card>
         );
 
       case 'upload':
-        return userType === 'researcher' ? (
+        return (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="w-5 h-5" />
-                Step 3: Upload Documents (Researcher)
+                Step 3: Upload Documents
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -365,7 +380,7 @@ const ProductRegistration = () => {
               )}
             </CardContent>
           </Card>
-        ) : null;
+        );
 
       case 'verify':
         return (
@@ -373,81 +388,89 @@ const ProductRegistration = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                {userType === 'researcher' ? 'Step 4: Document Verification' : 'Step 3: Data Verification'}
+                Step 4: Hash Verification
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hashInput">Enter the copied hash for verification:</Label>
+                  <Input
+                    id="hashInput"
+                    value={enteredHash}
+                    onChange={(e) => setEnteredHash(e.target.value)}
+                    placeholder="Paste the hash value here..."
+                    className="font-mono text-sm"
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleVerification}
+                  disabled={isVerifying || !enteredHash}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isVerifying ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      Verifying Hash...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Verify Hash
+                    </>
+                  )}
+                </Button>
+              </div>
+
+            </CardContent>
+          </Card>
+        );
+
+      case 'success':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                Upload Successful!
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center p-8">
-                {verificationStatus === 'pending' && (
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center">
-                      <Shield className="w-8 h-8 text-yellow-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Ready for Verification</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {userType === 'researcher' 
-                          ? 'Your documents will be verified for authenticity and compliance'
-                          : 'Your data will be verified for authenticity'
-                        }
-                      </p>
-                      <Button 
-                        onClick={handleVerification}
-                        disabled={isVerifying}
-                        className="w-full"
-                      >
-                        {isVerifying ? (
-                          <>
-                            <Clock className="w-4 h-4 mr-2 animate-spin" />
-                            Verifying Documents...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Start Verification
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {verificationStatus === 'verified' && (
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-8 h-8 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-green-700 mb-2">Verification Complete</h3>
-                      <p className="text-sm text-green-600">
-                        {userType === 'researcher' 
-                          ? 'Documents have been verified successfully'
-                          : 'Data has been verified successfully'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {verificationStatus === 'failed' && (
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                      <Shield className="w-8 h-8 text-red-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-red-700 mb-2">Verification Failed</h3>
-                      <p className="text-sm text-red-600 mb-4">
-                        Please check your documents and try again
-                      </p>
-                      <Button 
-                        onClick={() => setVerificationStatus('pending')}
-                        variant="outline"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="font-medium text-green-700 mb-2">Upload Complete!</h3>
+                <p className="text-sm text-green-600 mb-6">
+                  Your medical data has been successfully registered, uploaded, and verified on the blockchain.
+                </p>
+                
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => window.location.href = '/'}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Return to Home
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setCurrentStep('register');
+                      setRegisteredHash('');
+                      setEnteredHash('');
+                      setFormData({ productName: '', description: '', category: '', dataHash: '' });
+                      setUploadedFiles([]);
+                      setVerificationStatus('pending');
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Upload Another Document
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -458,6 +481,14 @@ const ProductRegistration = () => {
         return null;
     }
   };
+
+  // Check if should show researcher marketplace
+  const urlParams = new URLSearchParams(window.location.search);
+  const role = urlParams.get('role');
+  
+  if (role === 'researcher') {
+    return <ResearcherMarketplace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -484,18 +515,18 @@ const ProductRegistration = () => {
             <div className="lg:col-span-2">
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  {['register', 'hash', 'upload', 'verify'].map((step, index) => (
+                {['register', 'hash', 'upload', 'verify', 'success'].map((step, index) => (
                     <div key={step} className="flex items-center">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                         currentStep === step ? 'bg-primary text-primary-foreground' :
-                        ['register', 'hash', 'upload', 'verify'].indexOf(currentStep) > index ? 'bg-green-500 text-white' :
+                        ['register', 'hash', 'upload', 'verify', 'success'].indexOf(currentStep) > index ? 'bg-green-500 text-white' :
                         'bg-muted text-muted-foreground'
                       }`}>
-                        {['register', 'hash', 'upload', 'verify'].indexOf(currentStep) > index ? '✓' : index + 1}
+                        {['register', 'hash', 'upload', 'verify', 'success'].indexOf(currentStep) > index ? '✓' : index + 1}
                       </div>
-                      {index < 3 && (
+                      {index < 4 && (
                         <div className={`h-1 w-16 ml-2 ${
-                          ['register', 'hash', 'upload', 'verify'].indexOf(currentStep) > index ? 'bg-green-500' : 'bg-muted'
+                          ['register', 'hash', 'upload', 'verify', 'success'].indexOf(currentStep) > index ? 'bg-green-500' : 'bg-muted'
                         }`} />
                       )}
                     </div>
@@ -506,6 +537,7 @@ const ProductRegistration = () => {
                   <span>Hash</span>
                   <span>Upload</span>
                   <span>Verify</span>
+                  <span>Success</span>
                 </div>
               </div>
 

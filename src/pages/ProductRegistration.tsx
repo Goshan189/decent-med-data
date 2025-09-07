@@ -121,10 +121,18 @@ const ProductRegistration = () => {
         hash: mockHash,
         size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
         gateway: mockGateway,
-        price: Math.floor(Math.random() * 100 + 10).toString() // Random price between 10-110
+        price: Math.floor(Math.random() * 100 + 10).toString(), // Random price between 10-110
+        category: formData.category || 'Medical Record',
+        description: formData.description || 'Patient medical document',
+        uploadDate: new Date().toISOString()
       };
 
-      setUploadedFiles(prev => [...prev, newFile]);
+      setUploadedFiles(prev => {
+        const updated = [...prev, newFile];
+        // Store in localStorage so researchers can access it
+        localStorage.setItem('patientDocuments', JSON.stringify(updated));
+        return updated;
+      });
       
       toast({
         title: "Upload Successful!",

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,64 +12,60 @@ const ResearcherMarketplace = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [documents, setDocuments] = useState<any[]>([]);
 
-  // Mock data for uploaded documents by patients
-  const availableDocuments = [
-    {
-      id: 1,
-      name: "Blood Test Results 2024",
-      description: "Complete blood panel including CBC, lipids, and glucose levels",
-      category: "Laboratory Results",
-      size: "2.4 MB",
-      price: "45",
-      hash: "QmX7vKj9sH2pL3mN8qR4tY6uI0oP1zX2cV3bN4mM5sA6dF7g",
-      uploader: "0x742d...8e9f",
-      uploadDate: "2024-01-15",
-      verified: true,
-      downloads: 23
-    },
-    {
-      id: 2,
-      name: "MRI Brain Scan Report",
-      description: "High-resolution brain MRI with radiologist interpretation",
-      category: "Imaging",
-      size: "15.7 MB",
-      price: "120",
-      hash: "QmY8wLk0tH3qM4nO9rS5vZ7xJ1pQ2aY3dW4cO5nN6tB7eG8h",
-      uploader: "0x8d3f...2a1b",
-      uploadDate: "2024-01-12",
-      verified: true,
-      downloads: 8
-    },
-    {
-      id: 3,
-      name: "Cardiac Stress Test Results",
-      description: "Complete cardiac stress test with ECG and echo results",
-      category: "Cardiology",
-      size: "5.2 MB",
-      price: "75",
-      hash: "QmZ9xMl1uI4rN5oP0sT6wA8yK2qR3bZ4eX5dP6oO7uC8fH9i",
-      uploader: "0x1a2b...7c8d",
-      uploadDate: "2024-01-10",
-      verified: true,
-      downloads: 15
-    },
-    {
-      id: 4,
-      name: "Genetic Testing Report",
-      description: "Comprehensive genetic analysis for disease predisposition",
-      category: "Genetics",
-      size: "8.9 MB",
-      price: "200",
-      hash: "QmA0yNm2vJ5sO6pQ1tU7xB9zL3rS4cA5fY6eQ7pP8vD9gI0j",
-      uploader: "0x9e8f...3c4d",
-      uploadDate: "2024-01-08",
-      verified: true,
-      downloads: 31
+  // Get uploaded documents from localStorage (uploaded by patients)
+  const getUploadedDocuments = () => {
+    try {
+      const stored = localStorage.getItem('patientDocuments');
+      if (stored) {
+        const documents = JSON.parse(stored);
+        return documents.map((doc: any, index: number) => ({
+          id: index + 1,
+          name: doc.name,
+          description: doc.description,
+          category: doc.category,
+          size: doc.size,
+          price: doc.price,
+          hash: doc.hash,
+          uploader: "0x" + Math.random().toString(16).slice(2, 8) + "..." + Math.random().toString(16).slice(2, 6),
+          uploadDate: new Date(doc.uploadDate).toLocaleDateString(),
+          verified: true, // Assume verified since they went through the verification process
+          downloads: Math.floor(Math.random() * 50) + 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading patient documents:', error);
     }
-  ];
+    return [];
+  };
 
-  const categories = ['all', 'Laboratory Results', 'Imaging', 'Cardiology', 'Genetics'];
+  useEffect(() => {
+    const loadDocuments = () => {
+      const docs = getUploadedDocuments();
+      setDocuments(docs);
+    };
+    
+    loadDocuments();
+    
+    // Listen for storage changes to update in real-time
+    const handleStorageChange = () => {
+      loadDocuments();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const availableDocuments = documents;
+
+  // Get unique categories from uploaded documents
+  const getCategories = () => {
+    const uniqueCategories = [...new Set(documents.map(doc => doc.category))];
+    return ['all', ...uniqueCategories];
+  };
+
+  const categories = getCategories();
 
   const filteredDocuments = availableDocuments.filter(doc => {
     const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

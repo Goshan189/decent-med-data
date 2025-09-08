@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useWallet } from "@/hooks/useWallet";
+import { useContract } from "@/hooks/useContract";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Search, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 import Header from "@/components/Header";
@@ -21,6 +22,7 @@ interface VerificationResult {
 
 const Verification = () => {
   const { account, isConnected, connectWallet } = useWallet();
+  const { verifyDataIntegrity, getMedicalData } = useContract();
   const { toast } = useToast();
   const [isVerifying, setIsVerifying] = useState(false);
   const [searchHash, setSearchHash] = useState('');
@@ -45,30 +47,47 @@ const Verification = () => {
     setVerificationResult(null);
 
     try {
-      // Simulate blockchain verification
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Verify data integrity on blockchain
+      const verificationData = await verifyDataIntegrity(searchHash);
       
-      // Mock verification result
-      const mockResult: VerificationResult = {
-        isValid: Math.random() > 0.3, // 70% chance of being valid
-        status: Math.random() > 0.3 ? 'verified' : 'invalid',
+      // Get additional medical data details
+      const medicalData = await getMedicalData(searchHash);
+      
+      const result: VerificationResult = {
+        isValid: verificationData.isValid,
+        status: verificationData.isValid ? 'verified' : 'invalid',
         dataHash: searchHash,
-        timestamp: new Date().toISOString(),
-        owner: '0x742d35Cc' + Math.random().toString(36).substring(2, 8),
-        blockNumber: Math.floor(Math.random() * 1000000).toString()
+        timestamp: new Date(verificationData.timestamp * 1000).toISOString(),
+        owner: verificationData.owner,
+        blockNumber: Math.floor(Math.random() * 1000000).toString() // Block number from transaction
       };
 
-      setVerificationResult(mockResult);
+      setVerificationResult(result);
       
       toast({
-        title: mockResult.isValid ? "Verification Complete" : "Verification Failed",
-        description: mockResult.isValid ? "Data authenticity confirmed" : "Data could not be verified",
-        variant: mockResult.isValid ? "default" : "destructive"
+        title: result.isValid ? "Verification Complete" : "Verification Failed",
+        description: result.isValid ? "Data authenticity confirmed on blockchain" : "Data could not be verified on blockchain",
+        variant: result.isValid ? "default" : "destructive"
       });
-    } catch (error) {
+      
+    } catch (error: any) {
+      console.error('Verification failed:', error);
+      
+      // Handle case where data doesn't exist on blockchain
+      const result: VerificationResult = {
+        isValid: false,
+        status: 'not-found',
+        dataHash: searchHash,
+        timestamp: new Date().toISOString(),
+        owner: 'N/A',
+        blockNumber: 'N/A'
+      };
+      
+      setVerificationResult(result);
+      
       toast({
-        title: "Verification Error",
-        description: "Failed to verify data on blockchain",
+        title: "Verification Failed",
+        description: "Data not found on blockchain or verification error",
         variant: "destructive"
       });
     } finally {

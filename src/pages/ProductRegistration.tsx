@@ -7,21 +7,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useWallet } from "@/hooks/useWallet";
+import { useContract } from "@/hooks/useContract";
+import { useIPFS } from "@/hooks/useIPFS";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Shield, Clock, CheckCircle, Upload, ArrowLeft } from "lucide-react";
+import { Database, Shield, Clock, CheckCircle, Upload, ArrowLeft, Wallet } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResearcherMarketplace from "./ResearcherMarketplace";
 
 const ProductRegistration = () => {
   const { account, provider, connectWallet, isConnected } = useWallet();
+  const { registerPatient, registerMedicalData, isLoading: contractLoading } = useContract();
+  const { uploadToIPFS, isUploading, uploadProgress } = useIPFS();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentStep, setCurrentStep] = useState<'register' | 'hash' | 'upload' | 'verify' | 'success'>('register');
   const [isRegistering, setIsRegistering] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [registeredHash, setRegisteredHash] = useState<string>('');
   const [userType, setUserType] = useState<'researcher' | 'patient' | null>(null);
   const [enteredHash, setEnteredHash] = useState<string>('');
@@ -102,25 +104,16 @@ const ProductRegistration = () => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    setIsUploading(true);
-    setUploadProgress(0);
 
     try {
-      // Simulate IPFS upload with progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      // Simulate IPFS hash generation
-      const mockHash = `QmX${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      const mockGateway = `https://gateway.pinata.cloud/ipfs/${mockHash}`;
+      // Upload to IPFS using real integration
+      const { hash, gateway } = await uploadToIPFS(file);
 
       const newFile = {
         name: file.name,
-        hash: mockHash,
+        hash: hash,
         size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-        gateway: mockGateway,
+        gateway: gateway,
         price: Math.floor(Math.random() * 100 + 10).toString(), // Random price between 10-110
         category: formData.category || 'Medical Record',
         description: formData.description || 'Patient medical document',
@@ -136,7 +129,7 @@ const ProductRegistration = () => {
       
       toast({
         title: "Upload Successful!",
-        description: `Document uploaded to IPFS: ${mockHash.slice(0, 8)}...`,
+        description: `Document uploaded to IPFS: ${hash.slice(0, 8)}...`,
       });
 
       // Move to verification step
@@ -148,8 +141,6 @@ const ProductRegistration = () => {
         variant: "destructive"
       });
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }

@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { useIPFS } from "@/hooks/useIPFS";
 import { Upload, File, CheckCircle, Globe, HardDrive } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const DataStorage = () => {
   const { toast } = useToast();
+  const { uploadToIPFS, isUploading, uploadProgress } = useIPFS();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Array<{
     name: string;
     hash: string;
@@ -25,42 +25,32 @@ const DataStorage = () => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    setIsUploading(true);
-    setUploadProgress(0);
 
     try {
-      // Simulate IPFS upload with progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      // Simulate IPFS hash generation
-      const mockHash = `QmX${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      const mockGateway = `https://gateway.pinata.cloud/ipfs/${mockHash}`;
+      // Upload to IPFS using real integration
+      const { hash, gateway } = await uploadToIPFS(file);
 
       const newFile = {
         name: file.name,
-        hash: mockHash,
+        hash: hash,
         size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-        gateway: mockGateway
+        gateway: gateway
       };
 
       setUploadedFiles(prev => [...prev, newFile]);
       
       toast({
         title: "Upload Successful!",
-        description: `File uploaded to IPFS: ${mockHash.slice(0, 8)}...`,
+        description: `File uploaded to IPFS: ${hash.slice(0, 8)}...`,
       });
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
         description: "Failed to upload file to IPFS",
         variant: "destructive"
       });
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }

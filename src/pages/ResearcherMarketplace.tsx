@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Database, Download, Eye, ShoppingCart, Filter, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@/hooks/useWallet";
+import { useContract } from "@/hooks/useContract";
+import { Search, Eye, ShoppingCart, FileText, Calendar, DollarSign, User, Wallet, Database, Filter } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const ResearcherMarketplace = () => {
   const { toast } = useToast();
+  const { isConnected, connectWallet, account } = useWallet();
+  const { getPublicDataList, purchaseDataAccess } = useContract();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [documents, setDocuments] = useState<any[]>([]);

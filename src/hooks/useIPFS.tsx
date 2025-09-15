@@ -3,7 +3,7 @@ import { create } from "ipfs-http-client";
 
 // Configure IPFS client for local node or public gateway
 const ipfsClient = create({
-  host: "localhost",
+  host: "127.0.0.1",
   port: 5001,
   protocol: "http",
 });

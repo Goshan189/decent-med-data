@@ -53,12 +53,18 @@ export const useIPFS = () => {
       }, 200);
 
       // Upload to IPFS
-      result = await client.add(buffer, {
-        progress: (bytes: number) => {
-          const progress = Math.round((bytes / file.size) * 100);
-          setUploadProgress(Math.min(progress, 90));
-        },
-      });
+      result = await client.add(
+        { path: file.name, content: buffer },
+        {
+          wrapWithDirectory: true,
+          cidVersion: 1,
+          hashAlg: "sha2-256",
+          progress: (bytes: number) => {
+            const progress = Math.round((bytes / file.size) * 100);
+            setUploadProgress(Math.min(progress, 90));
+          },
+        }
+      );
 
       clearInterval(progressInterval);
       setUploadProgress(100);

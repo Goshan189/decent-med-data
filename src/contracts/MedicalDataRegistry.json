@@ -4,9 +4,24 @@
     {
       "anonymous": false,
       "inputs": [
-        {"indexed": true, "internalType": "bytes32", "name": "dataHash", "type": "bytes32"},
-        {"indexed": true, "internalType": "address", "name": "buyer", "type": "address"},
-        {"indexed": false, "internalType": "uint256", "name": "price", "type": "uint256"}
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "dataHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
       ],
       "name": "DataPurchased",
       "type": "event"
@@ -14,17 +29,40 @@
     {
       "anonymous": false,
       "inputs": [
-        {"indexed": true, "internalType": "bytes32", "name": "dataHash", "type": "bytes32"},
-        {"indexed": true, "internalType": "address", "name": "owner", "type": "address"},
-        {"indexed": false, "internalType": "string", "name": "ipfsHash", "type": "string"}
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "dataHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        }
       ],
       "name": "DataRegistered",
       "type": "event"
     },
     {
       "inputs": [
-        {"internalType": "string", "name": "_name", "type": "string"},
-        {"internalType": "string", "name": "_email", "type": "string"}
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_email",
+          "type": "string"
+        }
       ],
       "name": "registerPatient",
       "outputs": [],
@@ -33,19 +71,45 @@
     },
     {
       "inputs": [
-        {"internalType": "string", "name": "_ipfsHash", "type": "string"},
-        {"internalType": "string", "name": "_patientName", "type": "string"},
-        {"internalType": "string", "name": "_dataType", "type": "string"}
+        {
+          "internalType": "string",
+          "name": "_ipfsHash",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_patientName",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_dataType",
+          "type": "string"
+        }
       ],
       "name": "registerMedicalData",
-      "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [
-        {"internalType": "bytes32", "name": "_dataHash", "type": "bytes32"},
-        {"internalType": "uint256", "name": "_price", "type": "uint256"}
+        {
+          "internalType": "bytes32",
+          "name": "_dataHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_price",
+          "type": "uint256"
+        }
       ],
       "name": "makeDataPublic",
       "outputs": [],
@@ -54,7 +118,11 @@
     },
     {
       "inputs": [
-        {"internalType": "bytes32", "name": "_dataHash", "type": "bytes32"}
+        {
+          "internalType": "bytes32",
+          "name": "_dataHash",
+          "type": "bytes32"
+        }
       ],
       "name": "purchaseDataAccess",
       "outputs": [],
@@ -63,14 +131,34 @@
     },
     {
       "inputs": [
-        {"internalType": "bytes32", "name": "_dataHash", "type": "bytes32"}
+        {
+          "internalType": "bytes32",
+          "name": "_dataHash",
+          "type": "bytes32"
+        }
       ],
       "name": "verifyDataIntegrity",
       "outputs": [
-        {"internalType": "bool", "name": "", "type": "bool"},
-        {"internalType": "string", "name": "", "type": "string"},
-        {"internalType": "address", "name": "", "type": "address"},
-        {"internalType": "uint256", "name": "", "type": "uint256"}
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        },
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
       ],
       "stateMutability": "view",
       "type": "function"
@@ -78,28 +166,66 @@
     {
       "inputs": [],
       "name": "getPublicDataList",
-      "outputs": [{"internalType": "bytes32[]", "name": "", "type": "bytes32[]"}],
+      "outputs": [
+        {
+          "internalType": "bytes32[]",
+          "name": "",
+          "type": "bytes32[]"
+        }
+      ],
       "stateMutability": "view",
       "type": "function"
     },
     {
       "inputs": [
-        {"internalType": "bytes32", "name": "_dataHash", "type": "bytes32"}
+        {
+          "internalType": "bytes32",
+          "name": "_dataHash",
+          "type": "bytes32"
+        }
       ],
       "name": "getMedicalData",
       "outputs": [
-        {"internalType": "string", "name": "ipfsHash", "type": "string"},
-        {"internalType": "string", "name": "patientName", "type": "string"},
-        {"internalType": "string", "name": "dataType", "type": "string"},
-        {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
-        {"internalType": "address", "name": "owner", "type": "address"},
-        {"internalType": "bool", "name": "isPublic", "type": "bool"},
-        {"internalType": "uint256", "name": "price", "type": "uint256"}
+        {
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "patientName",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "dataType",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "isPublic",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
       ],
       "stateMutability": "view",
       "type": "function"
     }
   ],
   "network": "ganache-local",
-  "deployedAt": "2024-01-01T00:00:00.000Z"
+  "deployedAt": "2025-01-01T00:00:00.000Z"
 }

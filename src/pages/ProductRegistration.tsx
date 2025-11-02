@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,46 +10,71 @@ import { useWallet } from "@/hooks/useWallet";
 import { useContract } from "@/hooks/useContract";
 import { useIPFS } from "@/hooks/useIPFS";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Shield, Clock, CheckCircle, Upload, ArrowLeft, Wallet } from "lucide-react";
+import {
+  Database,
+  Shield,
+  Clock,
+  CheckCircle,
+  Upload,
+  ArrowLeft,
+  Wallet,
+} from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResearcherMarketplace from "./ResearcherMarketplace";
 
 const ProductRegistration = () => {
   const { account, provider, connectWallet, isConnected } = useWallet();
-  const { registerPatient, registerMedicalData, isLoading: contractLoading } = useContract();
+  const {
+    registerPatient,
+    registerMedicalData,
+    isLoading: contractLoading,
+    contract, // <<< ensure the raw contract instance is returned by your useContract hook
+  } = useContract();
   const { uploadToIPFS, isUploading, uploadProgress } = useIPFS();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentStep, setCurrentStep] = useState<'register' | 'hash' | 'upload' | 'verify' | 'success'>('register');
+  const [currentStep, setCurrentStep] = useState<
+    "register" | "hash" | "upload" | "verify" | "success"
+  >("register");
   const [isRegistering, setIsRegistering] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [registeredHash, setRegisteredHash] = useState<string>('');
-  const [userType, setUserType] = useState<'researcher' | 'patient' | null>(null);
-  const [enteredHash, setEnteredHash] = useState<string>('');
+  const [registeredHash, setRegisteredHash] = useState<string>("");
+  const [userType, setUserType] = useState<"researcher" | "patient" | null>(
+    null
+  );
+  const [enteredHash, setEnteredHash] = useState<string>("");
   const [formData, setFormData] = useState({
-    productName: '',
-    description: '',
-    category: '',
-    dataHash: ''
+    productName: "",
+    description: "",
+    category: "",
+    dataHash: "",
   });
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{
-    name: string;
-    hash: string;
-    size: string;
-    gateway: string;
-    price?: string;
-  }>>([]);
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'failed'>('pending');
+  const [uploadedFiles, setUploadedFiles] = useState<
+    Array<{
+      name: string;
+      hash: string;
+      dataHash?: string;
+      size: string;
+      gateway: string;
+      price?: string;
+      category?: string;
+      description?: string;
+      uploadDate?: string;
+    }>
+  >([]);
+  const [verificationStatus, setVerificationStatus] = useState<
+    "pending" | "verified" | "failed"
+  >("pending");
 
   // Check URL parameters for role
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const role = urlParams.get('role');
-    if (role === 'researcher') {
+    const role = urlParams.get("role");
+    if (role === "researcher") {
       return; // Show researcher marketplace
-    } else if (role === 'patient') {
-      setUserType('patient');
+    } else if (role === "patient") {
+      setUserType("patient");
     }
   }, []);
 
@@ -63,7 +88,7 @@ const ProductRegistration = () => {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -71,35 +96,42 @@ const ProductRegistration = () => {
     setIsRegistering(true);
     try {
       // Generate hash from form data
-      const dataString = `${formData.productName}${formData.description}${formData.category}${Date.now()}`;
-      const hash = `0x${Array.from(dataString).map((char, i) => 
-        (char.charCodeAt(0) + i).toString(16).padStart(2, '0')
-      ).join('').slice(0, 64)}`;
-      
+      const dataString = `${formData.productName}${formData.description}${
+        formData.category
+      }${Date.now()}`;
+      const hash = `0x${Array.from(dataString)
+        .map((char, i) =>
+          (char.charCodeAt(0) + i).toString(16).padStart(2, "0")
+        )
+        .join("")
+        .slice(0, 64)}`;
+
       // Simulate blockchain registration
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       setRegisteredHash(hash);
-      
+
       toast({
         title: "Success!",
         description: `Data registered! Hash: ${hash.slice(0, 10)}...`,
       });
-      
+
       // Move to hash verification step
-      setCurrentStep('hash');
+      setCurrentStep("hash");
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to register data on blockchain",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsRegistering(false);
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
@@ -109,41 +141,115 @@ const ProductRegistration = () => {
       // Upload to IPFS using real integration
       const { hash, gateway } = await uploadToIPFS(file);
 
-      const newFile = {
-        name: file.name,
-        hash: hash,
-        size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-        gateway: gateway,
-        price: Math.floor(Math.random() * 100 + 10).toString(), // Random price between 10-110
-        category: formData.category || 'Medical Record',
-        description: formData.description || 'Patient medical document',
-        uploadDate: new Date().toISOString()
-      };
-
-      setUploadedFiles(prev => {
-        const updated = [...prev, newFile];
-        // Store in localStorage so researchers can access it
-        localStorage.setItem('patientDocuments', JSON.stringify(updated));
+      // Persist IPFS info locally but DO NOT call on-chain yet (avoid MetaMask popup)
+      setUploadedFiles((prev) => {
+        const updated = [
+          ...prev,
+          {
+            name: file.name,
+            hash: hash,
+            // dataHash remains undefined until on-chain registration
+            size: (file.size / 1024 / 1024).toFixed(2) + " MB",
+            gateway,
+            price: Math.floor(Math.random() * 100 + 10).toString(),
+            category: formData.category || "Medical Record",
+            description: formData.description || "Patient medical document",
+            uploadDate: new Date().toISOString(),
+          },
+        ];
+        localStorage.setItem("patientDocuments", JSON.stringify(updated));
         return updated;
       });
-      
+
       toast({
         title: "Upload Successful!",
         description: `Document uploaded to IPFS: ${hash.slice(0, 8)}...`,
       });
 
       // Move to verification step
-      setCurrentStep('verify');
+      setCurrentStep("verify");
     } catch (error) {
       toast({
         title: "Upload Failed",
-        description: "Failed to upload document to IPFS",
-        variant: "destructive"
+        description:
+          (error as Error).message || "Failed to upload document to IPFS",
+        variant: "destructive",
       });
     } finally {
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
+    }
+  };
+
+  // New: explicit on-chain registration triggered by user action
+  const handleRegisterOnChain = async (index: number) => {
+    const file = uploadedFiles[index];
+    if (!file) return;
+
+    if (!provider || !account || !contract) {
+      toast({
+        title: "Wallet/Contract not ready",
+        description: "Connect wallet and ensure contract is loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const signer = await provider.getSigner();
+      const contractWithSigner = (contract as any).connect(signer);
+
+      if (!contractWithSigner?.registerMedicalData) {
+        throw new Error("Contract function registerMedicalData not available");
+      }
+
+      const tx = await contractWithSigner.registerMedicalData(
+        file.hash,
+        formData.productName || "data",
+        file.category || formData.category || ""
+      );
+      const receipt = await tx.wait();
+
+      // parse DataRegistered event
+      let registeredDataHash: string | null = null;
+      for (const log of receipt.logs) {
+        try {
+          const parsed = (
+            (contract as any).interface ?? contractWithSigner.interface
+          ).parseLog(log);
+          if (parsed.name === "DataRegistered") {
+            registeredDataHash = parsed.args.dataHash;
+            break;
+          }
+        } catch {}
+      }
+
+      if (!registeredDataHash) {
+        throw new Error(
+          "DataRegistered event not found — registration may have failed"
+        );
+      }
+
+      // update uploadedFiles with on-chain id
+      setUploadedFiles((prev) => {
+        const copy = [...prev];
+        copy[index] = { ...copy[index], dataHash: registeredDataHash };
+        localStorage.setItem("patientDocuments", JSON.stringify(copy));
+        return copy;
+      });
+
+      toast({
+        title: "Registration successful",
+        description: `On-chain id: ${registeredDataHash}`,
+      });
+    } catch (err: any) {
+      console.error("register on-chain failed", err);
+      toast({
+        title: "Registration failed",
+        description: err?.message ?? String(err),
+        variant: "destructive",
+      });
     }
   };
 
@@ -153,7 +259,7 @@ const ProductRegistration = () => {
       toast({
         title: "Error",
         description: "Please enter the hash value for verification",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -162,7 +268,7 @@ const ProductRegistration = () => {
       toast({
         title: "Verification Failed",
         description: "Hash does not match. Please check and try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -170,20 +276,20 @@ const ProductRegistration = () => {
     setIsVerifying(true);
     try {
       // Simulate verification process
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      setVerificationStatus('verified');
-      setCurrentStep('success');
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      setVerificationStatus("verified");
+      setCurrentStep("success");
       toast({
         title: "Verification Complete!",
         description: "Hash verified successfully. Upload complete!",
       });
     } catch (error) {
-      setVerificationStatus('failed');
+      setVerificationStatus("failed");
       toast({
         title: "Verification Failed",
         description: "Document verification failed. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsVerifying(false);
@@ -192,7 +298,7 @@ const ProductRegistration = () => {
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 'register':
+      case "register":
         return (
           <Card>
             <CardHeader>
@@ -207,33 +313,48 @@ const ProductRegistration = () => {
                 <Input
                   id="productName"
                   value={formData.productName}
-                  onChange={(e) => setFormData(prev => ({...prev, productName: e.target.value}))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      productName: e.target.value,
+                    }))
+                  }
                   placeholder="e.g., Blood Test Results 2024"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="description">Description *</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                   placeholder="Detailed description of the medical data"
                   rows={4}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Input
                   id="category"
                   value={formData.category}
-                  onChange={(e) => setFormData(prev => ({...prev, category: e.target.value}))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                    }))
+                  }
                   placeholder="e.g., Laboratory Results, Imaging, Prescriptions"
                 />
               </div>
 
-              <Button 
+              <Button
                 onClick={handleRegister}
                 disabled={isRegistering}
                 className="w-full"
@@ -251,15 +372,14 @@ const ProductRegistration = () => {
                     Register Data On-Chain
                   </>
                 ) : (
-                  'Connect Wallet to Register'
+                  "Connect Wallet to Register"
                 )}
               </Button>
-
             </CardContent>
           </Card>
         );
 
-      case 'hash':
+      case "hash":
         return (
           <Card>
             <CardHeader>
@@ -273,17 +393,24 @@ const ProductRegistration = () => {
                 <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
-                <h3 className="font-medium text-green-700 mb-2">Data Registered Successfully!</h3>
+                <h3 className="font-medium text-green-700 mb-2">
+                  Data Registered Successfully!
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Your data has been registered on the blockchain for verification
+                  Your data has been registered on the blockchain for
+                  verification
                 </p>
-                
+
                 <div className="bg-muted p-4 rounded-lg mb-6">
-                  <p className="text-xs text-muted-foreground mb-2">Generated Hash:</p>
-                  <p className="font-mono text-sm break-all">{registeredHash}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Generated Hash:
+                  </p>
+                  <p className="font-mono text-sm break-all">
+                    {registeredHash}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="mt-2"
                     onClick={() => {
                       navigator.clipboard.writeText(registeredHash);
@@ -294,8 +421,8 @@ const ProductRegistration = () => {
                   </Button>
                 </div>
 
-                <Button 
-                  onClick={() => setCurrentStep('upload')}
+                <Button
+                  onClick={() => setCurrentStep("upload")}
                   className="w-full"
                   size="lg"
                 >
@@ -306,7 +433,7 @@ const ProductRegistration = () => {
           </Card>
         );
 
-      case 'upload':
+      case "upload":
         return (
           <Card>
             <CardHeader>
@@ -324,16 +451,20 @@ const ProductRegistration = () => {
                   className="hidden"
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                 />
-                
+
                 {isUploading ? (
                   <div className="space-y-4">
                     <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                       <Upload className="w-8 h-8 text-primary animate-pulse" />
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Uploading to IPFS...</p>
+                      <p className="text-sm font-medium">
+                        Uploading to IPFS...
+                      </p>
                       <Progress value={uploadProgress} className="w-full" />
-                      <p className="text-xs text-muted-foreground">{uploadProgress}% complete</p>
+                      <p className="text-xs text-muted-foreground">
+                        {uploadProgress}% complete
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -342,11 +473,13 @@ const ProductRegistration = () => {
                       <Upload className="w-8 h-8 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium mb-2">Upload your medical documents</p>
+                      <p className="text-sm font-medium mb-2">
+                        Upload your medical documents
+                      </p>
                       <p className="text-xs text-muted-foreground mb-4">
                         Supported: PDF, JPG, PNG, DOC (Max 10MB)
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => fileInputRef.current?.click()}
                         variant="outline"
                       >
@@ -361,18 +494,42 @@ const ProductRegistration = () => {
                 <div className="space-y-4">
                   <h4 className="font-medium">Uploaded Documents:</h4>
                   {uploadedFiles.map((file, index) => (
-                    <div key={index} className="p-4 border border-border rounded-lg">
+                    <div
+                      key={index}
+                      className="p-4 border border-border rounded-lg"
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h5 className="font-medium text-sm">{file.name}</h5>
-                          <p className="text-xs text-muted-foreground">{file.size}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {file.size}
+                          </p>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Uploaded
-                        </Badge>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Uploaded
+                          </Badge>
+                          {file.dataHash ? (
+                            <Badge className="text-xs">On-chain</Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => handleRegisterOnChain(index)}
+                            >
+                              Register On-Chain
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">IPFS: {file.hash}</p>
+                      <p className="text-xs text-muted-foreground">
+                        IPFS: {file.hash}
+                      </p>
+                      {file.dataHash && (
+                        <p className="text-xs text-muted-foreground">
+                          On-chain id: {file.dataHash}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -381,7 +538,7 @@ const ProductRegistration = () => {
           </Card>
         );
 
-      case 'verify':
+      case "verify":
         return (
           <Card>
             <CardHeader>
@@ -393,7 +550,9 @@ const ProductRegistration = () => {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hashInput">Enter the copied hash for verification:</Label>
+                  <Label htmlFor="hashInput">
+                    Enter the copied hash for verification:
+                  </Label>
                   <Input
                     id="hashInput"
                     value={enteredHash}
@@ -402,8 +561,8 @@ const ProductRegistration = () => {
                     className="font-mono text-sm"
                   />
                 </div>
-                
-                <Button 
+
+                <Button
                   onClick={handleVerification}
                   disabled={isVerifying || !enteredHash}
                   className="w-full"
@@ -422,12 +581,11 @@ const ProductRegistration = () => {
                   )}
                 </Button>
               </div>
-
             </CardContent>
           </Card>
         );
 
-      case 'success':
+      case "success":
         return (
           <Card>
             <CardHeader>
@@ -441,28 +599,36 @@ const ProductRegistration = () => {
                 <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
-                <h3 className="font-medium text-green-700 mb-2">Upload Complete!</h3>
+                <h3 className="font-medium text-green-700 mb-2">
+                  Upload Complete!
+                </h3>
                 <p className="text-sm text-green-600 mb-6">
-                  Your medical data has been successfully registered, uploaded, and verified on the blockchain.
+                  Your medical data has been successfully registered, uploaded,
+                  and verified on the blockchain.
                 </p>
-                
+
                 <div className="space-y-3">
-                  <Button 
-                    onClick={() => window.location.href = '/'}
+                  <Button
+                    onClick={() => (window.location.href = "/")}
                     className="w-full"
                     size="lg"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Return to Home
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => {
-                      setCurrentStep('register');
-                      setRegisteredHash('');
-                      setEnteredHash('');
-                      setFormData({ productName: '', description: '', category: '', dataHash: '' });
+                      setCurrentStep("register");
+                      setRegisteredHash("");
+                      setEnteredHash("");
+                      setFormData({
+                        productName: "",
+                        description: "",
+                        category: "",
+                        dataHash: "",
+                      });
                       setUploadedFiles([]);
-                      setVerificationStatus('pending');
+                      setVerificationStatus("pending");
                     }}
                     variant="outline"
                     className="w-full"
@@ -475,7 +641,6 @@ const ProductRegistration = () => {
           </Card>
         );
 
-
       default:
         return null;
     }
@@ -483,16 +648,16 @@ const ProductRegistration = () => {
 
   // Check if should show researcher marketplace
   const urlParams = new URLSearchParams(window.location.search);
-  const role = urlParams.get('role');
-  
-  if (role === 'researcher') {
+  const role = urlParams.get("role");
+
+  if (role === "researcher") {
     return <ResearcherMarketplace />;
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="pt-20">
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
@@ -501,11 +666,14 @@ const ProductRegistration = () => {
               Product Registration
             </Badge>
             <h1 className="text-4xl font-bold text-foreground mb-6">
-              Register Medical Data <span className="bg-gradient-medical bg-clip-text text-transparent">On-Chain</span>
+              Register Medical Data{" "}
+              <span className="bg-gradient-medical bg-clip-text text-transparent">
+                On-Chain
+              </span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Securely register your medical data on the blockchain using Solidity smart contracts, 
-              Ganache testnet, and Truffle framework.
+              Securely register your medical data on the blockchain using
+              Solidity smart contracts, Ganache testnet, and Truffle framework.
             </p>
           </div>
 
@@ -514,22 +682,52 @@ const ProductRegistration = () => {
             <div className="lg:col-span-2">
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                {['register', 'hash', 'upload', 'verify', 'success'].map((step, index) => (
-                    <div key={step} className="flex items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        currentStep === step ? 'bg-primary text-primary-foreground' :
-                        ['register', 'hash', 'upload', 'verify', 'success'].indexOf(currentStep) > index ? 'bg-green-500 text-white' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                        {['register', 'hash', 'upload', 'verify', 'success'].indexOf(currentStep) > index ? '✓' : index + 1}
+                  {["register", "hash", "upload", "verify", "success"].map(
+                    (step, index) => (
+                      <div key={step} className="flex items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                            currentStep === step
+                              ? "bg-primary text-primary-foreground"
+                              : [
+                                  "register",
+                                  "hash",
+                                  "upload",
+                                  "verify",
+                                  "success",
+                                ].indexOf(currentStep) > index
+                              ? "bg-green-500 text-white"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {[
+                            "register",
+                            "hash",
+                            "upload",
+                            "verify",
+                            "success",
+                          ].indexOf(currentStep) > index
+                            ? "✓"
+                            : index + 1}
+                        </div>
+                        {index < 4 && (
+                          <div
+                            className={`h-1 w-16 ml-2 ${
+                              [
+                                "register",
+                                "hash",
+                                "upload",
+                                "verify",
+                                "success",
+                              ].indexOf(currentStep) > index
+                                ? "bg-green-500"
+                                : "bg-muted"
+                            }`}
+                          />
+                        )}
                       </div>
-                      {index < 4 && (
-                        <div className={`h-1 w-16 ml-2 ${
-                          ['register', 'hash', 'upload', 'verify', 'success'].indexOf(currentStep) > index ? 'bg-green-500' : 'bg-muted'
-                        }`} />
-                      )}
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Register</span>
@@ -552,7 +750,10 @@ const ProductRegistration = () => {
                 <CardContent>
                   {isConnected ? (
                     <div className="space-y-2">
-                      <Badge variant="secondary" className="w-full justify-center">
+                      <Badge
+                        variant="secondary"
+                        className="w-full justify-center"
+                      >
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Connected
                       </Badge>
@@ -595,7 +796,7 @@ const ProductRegistration = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

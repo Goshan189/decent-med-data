@@ -1,28 +1,68 @@
 import { useState } from "react";
 import { create } from "ipfs-http-client";
 
-// Configure IPFS client for local node or public gateway
-const ipfsClient = create({
-  host: "127.0.0.1",
-  port: 5001,
-  protocol: "http",
-});
+// use Vite env (import.meta.env) — safe in browser
+const USE_LOCAL = (import.meta.env.VITE_USE_LOCAL_IPFS ?? "false") === "true";
+const INFURA_ID = import.meta.env.VITE_INFURA_PROJECT_ID as string | undefined;
+const INFURA_SECRET = import.meta.env.VITE_INFURA_PROJECT_SECRET as
+  | string
+  | undefined;
+const LOCAL_API = "http://127.0.0.1:5001/api/v0";
+const LOCAL_GATEWAY_PORT = import.meta.env.VITE_IPFS_GATEWAY_PORT ?? "8081";
+const LOCAL_GATEWAY = `http://127.0.0.1:${LOCAL_GATEWAY_PORT}/ipfs`;
+const PUBLIC_GATEWAY = "https://ipfs.io/ipfs";
 
-// Fallback to public IPFS gateway if local node is not available
-const publicClient = create({
-  host: "ipfs.infura.io",
-  port: 5001,
-  protocol: "https",
-  headers: {
-    authorization:
-      "Basic " +
-      btoa("2FMXLz2VX6K4kJzZ8QjnQzJM0qF:c3f1b7a8e2d4c9f0a1b2c3d4e5f6g7h8"),
-  },
-});
+/**
+ * Robust useIPFS hook:
+ * - Prefer local daemon when NEXT_PUBLIC_USE_LOCAL_IPFS=true
+ * - Use Infura when NEXT_PUBLIC_INFURA_PROJECT_ID/SECRET provided
+ * - Fall back to public gateway for reads if no API client available
+ * - Provide clear errors instead of silent mock hashes
+ */
+
+let apiClient: any | undefined = undefined;
+
+// initialize client based on env/availability
+const initClient = () => {
+  if (apiClient) return apiClient;
+
+  try {
+    if (USE_LOCAL) {
+      apiClient = create({ url: LOCAL_API });
+      return apiClient;
+    }
+
+    if (INFURA_ID && INFURA_SECRET) {
+      const auth =
+        typeof window !== "undefined"
+          ? btoa(`${INFURA_ID}:${INFURA_SECRET}`)
+          : Buffer.from(`${INFURA_ID}:${INFURA_SECRET}`).toString("base64");
+
+      apiClient = create({
+        url: "https://ipfs.infura.io:5001/api/v0",
+        headers: {
+          authorization: `Basic ${auth}`,
+        },
+      });
+      return apiClient;
+    }
+
+    // No API client configured (will use public gateway for reads, but uploads are disabled)
+    apiClient = undefined;
+    return apiClient;
+  } catch (err) {
+    console.error("Failed to init IPFS client:", err);
+    apiClient = undefined;
+    return apiClient;
+  }
+};
 
 export const useIPFS = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const makeGatewayUrl = (cid: string) =>
+    USE_LOCAL ? `${LOCAL_GATEWAY}/${cid}` : `${PUBLIC_GATEWAY}/${cid}`;
 
   const uploadToIPFS = async (
     file: File
@@ -31,37 +71,30 @@ export const useIPFS = () => {
     setUploadProgress(0);
 
     try {
-      // Try local IPFS node first, fallback to public gateway
-      let client = ipfsClient;
-      let result;
+      const client = initClient();
 
-      try {
-        // Test connection to local IPFS node
-        await client.version();
-      } catch (error) {
-        console.log("Local IPFS node not available, using public gateway");
-        client = publicClient;
+      if (!client) {
+        throw new Error(
+          "No IPFS API client configured. Enable local daemon (NEXT_PUBLIC_USE_LOCAL_IPFS=true) or set Infura credentials (NEXT_PUBLIC_INFURA_PROJECT_ID / NEXT_PUBLIC_INFURA_PROJECT_SECRET)."
+        );
       }
 
-      // Convert file to buffer
-      const fileBuffer = await file.arrayBuffer();
-      const buffer = new Uint8Array(fileBuffer);
+      // convert file to Uint8Array
+      const buffer = new Uint8Array(await file.arrayBuffer());
 
-      // Simulate progress updates
+      // optional progress simulation/updates handled by client.progress when available
       const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => Math.min(prev + 10, 90));
+        setUploadProgress((p) => Math.min(p + 8, 90));
       }, 200);
 
-      // Upload to IPFS
-      result = await client.add(
+      const added = await client.add(
         { path: file.name, content: buffer },
         {
-          wrapWithDirectory: true,
           cidVersion: 1,
           hashAlg: "sha2-256",
           progress: (bytes: number) => {
-            const progress = Math.round((bytes / file.size) * 100);
-            setUploadProgress(Math.min(progress, 90));
+            const percent = Math.round((bytes / file.size) * 100);
+            setUploadProgress(Math.min(percent, 90));
           },
         }
       );
@@ -69,77 +102,65 @@ export const useIPFS = () => {
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      const hash = result.cid.toString(); // <-- USE THE ACTUAL CID
-      console.log(hash);
-      const gateway = `http://127.0.0.1:8080/ipfs/${hash}`;
+      const cid = added.cid?.toString?.() ?? String(added?.path ?? added);
+      const gateway = makeGatewayUrl(cid);
 
-      return { hash, gateway };
-    } catch (error) {
-      console.error("IPFS upload failed:", error);
-
-      // Fallback to mock hash for development
-      console.log("Using mock IPFS hash for development");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const mockHash = `QmX${Math.random()
-        .toString(36)
-        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      const mockGateway = `https://ipfs.io/ipfs/${mockHash}`;
-
-      setUploadProgress(100);
-      return { hash: mockHash, gateway: mockGateway };
+      return { hash: cid, gateway };
+    } catch (err: any) {
+      console.error("IPFS upload failed:", err);
+      // surface actionable error
+      throw new Error(err?.message ?? "IPFS upload failed");
     } finally {
       setIsUploading(false);
-      setTimeout(() => setUploadProgress(0), 1000);
+      setTimeout(() => setUploadProgress(0), 800);
     }
   };
 
   const getFromIPFS = async (hash: string): Promise<string> => {
+    // prefer API client cat, otherwise fetch from gateway
     try {
-      let client = ipfsClient;
-
-      try {
-        await client.version();
-      } catch (error) {
-        client = publicClient;
+      const client = initClient();
+      if (client) {
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of client.cat(hash)) {
+          chunks.push(chunk);
+        }
+        const total = chunks.reduce((acc, c) => acc + c.length, 0);
+        const out = new Uint8Array(total);
+        let offset = 0;
+        for (const c of chunks) {
+          out.set(c, offset);
+          offset += c.length;
+        }
+        return new TextDecoder().decode(out);
+      } else {
+        // fallback to gateway fetch (CORS must allow this)
+        const url = makeGatewayUrl(hash);
+        const res = await fetch(url);
+        if (!res.ok)
+          throw new Error(
+            `Gateway fetch failed: ${res.status} ${res.statusText}`
+          );
+        return await res.text();
       }
-
-      const chunks = [];
-      for await (const chunk of client.cat(hash)) {
-        chunks.push(chunk);
-      }
-
-      const data = new Uint8Array(
-        chunks.reduce((acc, chunk) => acc + chunk.length, 0)
-      );
-      let offset = 0;
-      for (const chunk of chunks) {
-        data.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      return new TextDecoder().decode(data);
-    } catch (error) {
-      console.error("Failed to retrieve from IPFS:", error);
-      throw new Error("Failed to retrieve data from IPFS");
+    } catch (err) {
+      console.error("Failed to retrieve from IPFS:", err);
+      throw new Error(err?.message ?? "Failed to retrieve data from IPFS");
     }
   };
 
   const pinToIPFS = async (hash: string): Promise<void> => {
     try {
-      let client = ipfsClient;
-
-      try {
-        await client.version();
-      } catch (error) {
-        client = publicClient;
+      const client = initClient();
+      if (!client) {
+        throw new Error(
+          "Pinning requires an IPFS API client (local daemon or Infura credentials)."
+        );
       }
-
       await client.pin.add(hash);
-      console.log(`Successfully pinned ${hash} to IPFS`);
-    } catch (error) {
-      console.error("Failed to pin to IPFS:", error);
-      throw new Error("Failed to pin data to IPFS");
+    } catch (err) {
+      console.error("Failed to pin to IPFS:", err);
+      throw new Error(err?.message ?? "Failed to pin data to IPFS");
     }
   };
 
@@ -149,5 +170,6 @@ export const useIPFS = () => {
     pinToIPFS,
     isUploading,
     uploadProgress,
+    makeGatewayUrl,
   };
 };

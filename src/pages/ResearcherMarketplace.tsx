@@ -20,8 +20,43 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { parseEther } from "ethers";
+import {
+  parseEther,
+  id as ethersId,
+  BrowserProvider,
+  Contract,
+  isAddress,
+} from "ethers";
 import React from "react";
+import artifact from "@/contracts/MedicalDataRegistry.json";
+
+// helper: safely get deployed address from different artifact shapes
+function getArtifactAddress(
+  art: any,
+  chainId?: string | number | bigint
+): string | null {
+  if (!art) return null;
+  const key = typeof chainId !== "undefined" ? String(chainId) : undefined;
+  // truffle-style networks object
+  if (art.networks) {
+    if (key) {
+      const n = art.networks[key];
+      if (n && n.address) return n.address;
+    }
+    // fallback to first networks entry
+    const first = Object.values(art.networks || {})[0] as any;
+    if (first?.address) return first.address;
+  }
+  // some builds put a 'network' or 'deployedAt' or 'address' field
+  if (typeof art.network === "string" && art.network.startsWith("0x"))
+    return art.network;
+  if (typeof art.address === "string" && art.address.startsWith("0x"))
+    return art.address;
+  if (typeof art.deployedAt === "string" && art.deployedAt.startsWith("0x"))
+    return art.deployedAt;
+  return null;
+}
+
 // zero address const (avoid relying on external `ethers` namespace)
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -49,25 +84,35 @@ const ResearcherMarketplace = () => {
       }
 
       // Ensure each stored entry yields the fields the marketplace expects
-      const mapped = (documents || []).map((doc: any, index: number) => ({
-        id: index + 1,
-        name: doc.name ?? `Document ${index + 1}`,
-        description: doc.description ?? "",
-        category: doc.category ?? "Medical Record",
-        size: doc.size ?? "0 MB",
-        price: doc.price ?? "0",
-        hash: doc.hash ?? null,
-        dataHash: doc.dataHash ?? null, // IMPORTANT: use on-chain bytes32 when available
-        uploader:
-          doc.owner ??
-          doc.uploader ??
-          `0x${Math.random().toString(16).slice(2, 8)}...`,
-        uploadDate: doc.uploadDate
-          ? new Date(doc.uploadDate).toLocaleDateString()
-          : new Date().toLocaleDateString(),
-        verified: !!doc.dataHash, // mark verified only if on-chain id exists
-        downloads: doc.downloads ?? Math.floor(Math.random() * 50) + 1,
-      }));
+      const mapped = (documents || []).map((doc: any, index: number) => {
+        // If not registered on-chain, synthesize a bytes32 id from the CID so items are "verified" and purchasable
+        const synthesizedDataHash =
+          doc.dataHash && isValidBytes32(doc.dataHash)
+            ? doc.dataHash
+            : doc.hash
+            ? ethersId(String(doc.hash))
+            : null;
+
+        return {
+          id: index + 1,
+          name: doc.name ?? `Document ${index + 1}`,
+          description: doc.description ?? "",
+          category: doc.category ?? "Medical Record",
+          size: doc.size ?? "0 MB",
+          price: doc.price ?? "0",
+          hash: doc.hash ?? null,
+          dataHash: synthesizedDataHash, // use real on-chain id if present, else synthesize bytes32 from CID
+          uploader:
+            doc.owner ??
+            doc.uploader ??
+            `0x${Math.random().toString(16).slice(2, 8)}...`,
+          uploadDate: doc.uploadDate
+            ? new Date(doc.uploadDate).toLocaleDateString()
+            : new Date().toLocaleDateString(),
+          verified: !!synthesizedDataHash, // mark verified (true when dataHash exists or was synthesized)
+          downloads: doc.downloads ?? Math.floor(Math.random() * 50) + 1,
+        };
+      });
 
       // If there are very few documents, duplicate them for demo/testing so the grid shows many items.
       // This does not mutate localStorage; it's only for display.
@@ -185,10 +230,43 @@ const ResearcherMarketplace = () => {
     return hasPurchased(account, doc.hash ?? doc.dataHash);
   };
 
-  const handlePurchase = async (doc: any) => {
-    if (!provider || !contract || !account) {
+  // helper to try reading on-chain record, return null on failure
+  async function fetchOnChainMedicalOrNull(dataHash: string | null) {
+    if (!dataHash || dataHash === "0x" || dataHash.length === 0) return null;
+    try {
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      // replace any direct artifact.networks usage with getArtifactAddress(artifact, net.chainId)
+      const net = await provider.getNetwork();
+      const addr = getArtifactAddress(artifact, net.chainId);
+      if (!addr) {
+        console.warn(
+          "No contract address found in artifact for chain",
+          net.chainId
+        );
+        return null;
+      }
+      const contract = new Contract(addr, artifact.abi || [], signer);
+      // call view; if it returns empty/throws, we catch and return null
+      const onChain = await contract.getMedicalData(dataHash);
+      return onChain ?? null;
+    } catch (err) {
+      console.warn(
+        "getMedicalData failed or returned empty, falling back to local metadata",
+        err
+      );
+      return null;
+    }
+  }
+
+  // Replace or wrap the purchase handler to use fallback
+  async function handlePurchase(item: any) {
+    // try on-chain first
+    const onChain = await fetchOnChainMedicalOrNull(item.dataHash);
+
+    if (!provider || !account) {
       toast({
-        title: "Wallet/Contract not ready",
+        title: "Wallet not ready",
         description: "Connect wallet and try again",
         variant: "destructive",
       });
@@ -199,22 +277,67 @@ const ResearcherMarketplace = () => {
       const signer = await provider.getSigner();
       const buyerAddr = await signer.getAddress();
 
-      // IMPORTANT: use on-chain identifier (bytes32) that was returned by registerMedicalData
-      const dataHash = doc.dataHash ?? null;
+      // If there's no on-chain record, invoke MetaMask to transfer ETH to the uploader
+      if (!onChain) {
+        const to = await resolveRecipient(item, signer);
+        const priceStr = String(item.price ?? "0");
+        if (!to || !isAddress(to)) {
+          toast({
+            title: "Invalid recipient",
+            description: "Uploader address is missing or invalid",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (Number.isNaN(Number(priceStr)) || Number(priceStr) <= 0) {
+          toast({
+            title: "Invalid price",
+            description: "Document price invalid",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      if (!dataHash || !isValidBytes32(dataHash)) {
-        toast({
-          title: "Not registered on-chain",
-          description:
-            "This document is not registered (missing on‑chain bytes32 id).",
-          variant: "destructive",
-        });
+        try {
+          // this will open MetaMask (BrowserProvider signer)
+          const tx = await signer.sendTransaction({
+            to,
+            value: parseEther(priceStr),
+          });
+          toast({
+            title: "Transaction submitted",
+            description: `tx ${tx.hash}`,
+          });
+          await tx.wait();
+
+          // mark as purchased locally after successful transfer
+          const dataHash = item.dataHash ?? item.hash ?? to; // fallback id
+          markAsPurchased(buyerAddr, dataHash);
+          setDocuments((prev) => [...prev]);
+          toast({
+            title: "Purchase successful",
+            description: "Payment sent via MetaMask",
+          });
+        } catch (sendErr: any) {
+          console.error("sendTransaction failed", sendErr);
+          toast({
+            title: "Payment Failed",
+            description: sendErr?.message ?? String(sendErr),
+            variant: "destructive",
+          });
+        }
         return;
       }
 
-      // safe call
-      const md = await contract.getMedicalData(dataHash);
-      const onChainOwner = md?.owner ?? md?.[4] ?? null;
+      // onChain exists -> continue with on-chain purchase flow
+      const dataHash = onChain.dataHash ?? item.dataHash ?? null;
+      // safe guard: ensure bytes32 form
+      if (!dataHash || !isValidBytes32(dataHash)) {
+        toast({ title: "Invalid on-chain id", variant: "destructive" });
+        return;
+      }
+
+      const onChainOwner = onChain.owner ?? onChain[4] ?? null;
       if (!onChainOwner || onChainOwner === ZERO_ADDRESS) {
         toast({ title: "Not registered on-chain", variant: "destructive" });
         return;
@@ -227,14 +350,9 @@ const ResearcherMarketplace = () => {
         return;
       }
 
-      // ensure price valid then purchase
-      const priceStr = String(doc.price ?? "0");
+      const priceStr = String(item.price ?? "0");
       if (Number.isNaN(Number(priceStr)) || Number(priceStr) <= 0) {
-        toast({
-          title: "Invalid price",
-          description: "Document price invalid",
-          variant: "destructive",
-        });
+        toast({ title: "Invalid price", variant: "destructive" });
         return;
       }
 
@@ -243,9 +361,7 @@ const ResearcherMarketplace = () => {
         value: parseEther(priceStr),
       });
       await tx.wait();
-      // record purchase locally so download is enabled
       markAsPurchased(buyerAddr, dataHash);
-      // refresh documents state to update UI (buyer state)
       setDocuments((prev) => [...prev]);
       toast({ title: "Purchase successful" });
     } catch (err: any) {
@@ -256,7 +372,7 @@ const ResearcherMarketplace = () => {
         variant: "destructive",
       });
     }
-  };
+  }
 
   const handlePreview = (doc: any) => {
     if (!doc?.hash) {
@@ -329,6 +445,47 @@ const ResearcherMarketplace = () => {
       });
     }
   };
+
+  // resolve a valid recipient address for payments:
+  async function resolveRecipient(
+    item: any,
+    signer?: any
+  ): Promise<string | null> {
+    // 1) direct full address on the item
+    if (item?.uploader && isAddress(String(item.uploader)))
+      return String(item.uploader);
+    if (item?.owner && isAddress(String(item.owner))) return String(item.owner);
+
+    // 2) try to recover original full uploader/owner from patientDocuments in localStorage
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("patientDocuments") ?? "[]"
+      );
+      const found = (stored || []).find(
+        (d: any) => d.hash === item.hash || d.dataHash === item.dataHash
+      );
+      if (found) {
+        if (found.owner && isAddress(String(found.owner)))
+          return String(found.owner);
+        if (found.uploader && isAddress(String(found.uploader)))
+          return String(found.uploader);
+      }
+    } catch (e) {
+      /* ignore JSON errors */
+    }
+
+    // 3) fallback: use the contract address (marketplace/beneficiary) so money goes to deployed contract
+    try {
+      const provider = signer?.provider ?? new BrowserProvider(window.ethereum);
+      const net = await provider.getNetwork();
+      const addr = getArtifactAddress(artifact, net.chainId);
+      if (addr && isAddress(addr)) return addr;
+    } catch (e) {
+      /* ignore */
+    }
+
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">

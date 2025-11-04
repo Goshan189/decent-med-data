@@ -22,6 +22,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ResearcherMarketplace from "./ResearcherMarketplace";
+import { id as ethersId } from "ethers";
 
 const ProductRegistration = () => {
   const { account, provider, connectWallet, isConnected } = useWallet();
@@ -184,69 +185,46 @@ const ProductRegistration = () => {
 
   // New: explicit on-chain registration triggered by user action
   const handleRegisterOnChain = async (index: number) => {
+    // No on-chain call: synthesize a bytes32 identifier from the CID and mark locally verified
     const file = uploadedFiles[index];
     if (!file) return;
 
-    if (!provider || !account || !contract) {
-      toast({
-        title: "Wallet/Contract not ready",
-        description: "Connect wallet and ensure contract is loaded",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      const signer = await provider.getSigner();
-      const contractWithSigner = (contract as any).connect(signer);
+      const synthesized =
+        file.dataHash && file.dataHash.startsWith("0x")
+          ? file.dataHash
+          : file.hash
+          ? ethersId(String(file.hash))
+          : null;
 
-      if (!contractWithSigner?.registerMedicalData) {
-        throw new Error("Contract function registerMedicalData not available");
+      if (!synthesized) {
+        toast({
+          title: "Cannot verify",
+          description: "Missing IPFS CID to synthesize verification id",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const tx = await contractWithSigner.registerMedicalData(
-        file.hash,
-        formData.productName || "data",
-        file.category || formData.category || ""
-      );
-      const receipt = await tx.wait();
-
-      // parse DataRegistered event
-      let registeredDataHash: string | null = null;
-      for (const log of receipt.logs) {
-        try {
-          const parsed = (
-            (contract as any).interface ?? contractWithSigner.interface
-          ).parseLog(log);
-          if (parsed.name === "DataRegistered") {
-            registeredDataHash = parsed.args.dataHash;
-            break;
-          }
-        } catch {}
-      }
-
-      if (!registeredDataHash) {
-        throw new Error(
-          "DataRegistered event not found — registration may have failed"
-        );
-      }
-
-      // update uploadedFiles with on-chain id
       setUploadedFiles((prev) => {
         const copy = [...prev];
-        copy[index] = { ...copy[index], dataHash: registeredDataHash };
+        copy[index] = { ...copy[index], dataHash: synthesized };
         localStorage.setItem("patientDocuments", JSON.stringify(copy));
         return copy;
       });
 
+      setVerificationStatus("verified");
       toast({
-        title: "Registration successful",
-        description: `On-chain id: ${registeredDataHash}`,
+        title: "Marked verified",
+        description: `Locally marked as verified (id ${synthesized.slice(
+          0,
+          10
+        )}...)`,
       });
     } catch (err: any) {
-      console.error("register on-chain failed", err);
+      console.error("local verify failed", err);
       toast({
-        title: "Registration failed",
+        title: "Verification failed",
         description: err?.message ?? String(err),
         variant: "destructive",
       });

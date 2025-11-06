@@ -51,19 +51,21 @@ const ProductRegistration = () => {
     category: "",
     dataHash: "",
   });
-  const [uploadedFiles, setUploadedFiles] = useState<
-    Array<{
-      name: string;
-      hash: string;
-      dataHash?: string;
-      size: string;
-      gateway: string;
-      price?: string;
-      category?: string;
-      description?: string;
-      uploadDate?: string;
-    }>
-  >([]);
+  type UploadedFile = {
+    name: string;
+    hash: string;
+    dataHash?: string;
+    size: string;
+    gateway: string;
+    price?: string;
+    category?: string;
+    description?: string;
+    uploadDate?: string;
+    uploader?: string;
+    owner?: string;
+  };
+
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [verificationStatus, setVerificationStatus] = useState<
     "pending" | "verified" | "failed"
   >("pending");
@@ -144,20 +146,31 @@ const ProductRegistration = () => {
 
       // Persist IPFS info locally but DO NOT call on-chain yet (avoid MetaMask popup)
       setUploadedFiles((prev) => {
-        const updated = [
-          ...prev,
-          {
-            name: file.name,
-            hash: hash,
-            // dataHash remains undefined until on-chain registration
-            size: (file.size / 1024 / 1024).toFixed(2) + " MB",
-            gateway,
-            price: Math.floor(Math.random() * 100 + 10).toString(),
-            category: formData.category || "Medical Record",
-            description: formData.description || "Patient medical document",
-            uploadDate: new Date().toISOString(),
-          },
-        ];
+        // load persisted documents
+        const stored: any[] = JSON.parse(
+          localStorage.getItem("patientDocuments") ?? "[]"
+        );
+        // use Map keyed by CID/hash to dedupe
+        const map = new Map<string, any>();
+        (stored || []).forEach((d: any) => {
+          if (d?.hash) map.set(String(d.hash), d);
+        });
+        // add/overwrite the newly uploaded file entry
+        const newEntry = {
+          name: file.name,
+          hash: hash,
+          dataHash: undefined,
+          size: (file.size / 1024 / 1024).toFixed(2) + " MB",
+          gateway,
+          price: Math.floor(Math.random() * 100 + 10).toString(),
+          category: formData.category || "Medical Record",
+          description: formData.description || "Patient medical document",
+          uploadDate: new Date().toISOString(),
+          uploader: account ?? undefined,
+          owner: account ?? undefined,
+        };
+        map.set(String(hash), newEntry);
+        const updated = Array.from(map.values());
         localStorage.setItem("patientDocuments", JSON.stringify(updated));
         return updated;
       });
@@ -208,7 +221,13 @@ const ProductRegistration = () => {
 
       setUploadedFiles((prev) => {
         const copy = [...prev];
-        copy[index] = { ...copy[index], dataHash: synthesized };
+        copy[index] = {
+          ...copy[index],
+          dataHash: synthesized,
+          // ensure uploader/owner is the connected wallet (so purchases route to uploader)
+          uploader: copy[index].uploader ?? account ?? undefined,
+          owner: copy[index].owner ?? account ?? undefined,
+        };
         localStorage.setItem("patientDocuments", JSON.stringify(copy));
         return copy;
       });

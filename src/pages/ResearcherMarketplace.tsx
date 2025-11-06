@@ -77,15 +77,18 @@ const ResearcherMarketplace = () => {
   // Get uploaded documents from localStorage (uploaded by patients)
   const getUploadedDocuments = () => {
     try {
-      const stored = localStorage.getItem("patientDocuments");
-      let documents: any[] = [];
-      if (stored) {
-        documents = JSON.parse(stored);
-      }
+      const stored = JSON.parse(
+        localStorage.getItem("patientDocuments") ?? "[]"
+      ) as any[];
+      // dedupe by CID/hash and keep the most recent entry for a given CID
+      const map = new Map<string, any>();
+      (stored || []).forEach((doc: any, idx: number) => {
+        if (!doc || !doc.hash) return;
+        // use incoming doc (later entries overwrite earlier ones)
+        map.set(String(doc.hash), { ...doc, _idx: idx });
+      });
 
-      // Ensure each stored entry yields the fields the marketplace expects
-      const mapped = (documents || []).map((doc: any, index: number) => {
-        // If not registered on-chain, synthesize a bytes32 id from the CID so items are "verified" and purchasable
+      const mapped = Array.from(map.values()).map((doc: any, index: number) => {
         const synthesizedDataHash =
           doc.dataHash && isValidBytes32(doc.dataHash)
             ? doc.dataHash
@@ -101,36 +104,23 @@ const ResearcherMarketplace = () => {
           size: doc.size ?? "0 MB",
           price: doc.price ?? "0",
           hash: doc.hash ?? null,
-          dataHash: synthesizedDataHash, // use real on-chain id if present, else synthesize bytes32 from CID
+          dataHash: synthesizedDataHash,
           uploader:
             doc.owner ??
             doc.uploader ??
-            `0x${Math.random().toString(16).slice(2, 8)}...`,
+            (typeof doc.uploader === "string"
+              ? doc.uploader
+              : `0x${Math.random().toString(16).slice(2, 8)}...`),
           uploadDate: doc.uploadDate
             ? new Date(doc.uploadDate).toLocaleDateString()
             : new Date().toLocaleDateString(),
-          verified: !!synthesizedDataHash, // mark verified (true when dataHash exists or was synthesized)
+          verified: !!synthesizedDataHash,
           downloads: doc.downloads ?? Math.floor(Math.random() * 50) + 1,
         };
       });
 
-      // If there are very few documents, duplicate them for demo/testing so the grid shows many items.
-      // This does not mutate localStorage; it's only for display.
-      const desiredCount = 8;
-      const output = [...mapped];
-      let i = 0;
-      while (output.length < desiredCount && mapped.length > 0) {
-        const base = mapped[i % mapped.length];
-        output.push({
-          ...base,
-          id: output.length + 1,
-          name: `${base.name} (${output.length + 1})`,
-        });
-        i++;
-      }
-
-      console.debug("[Marketplace] loaded documents:", output);
-      return output;
+      console.debug("[Marketplace] loaded unique documents:", mapped);
+      return mapped;
     } catch (error) {
       console.error("Error loading patient documents:", error);
     }
